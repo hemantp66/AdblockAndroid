@@ -9,7 +9,6 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdk rootProject.ext.target_sdk_version
-        versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
