@@ -2,6 +2,8 @@ package io.github.edsuns.adfilter.impl
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -45,24 +47,26 @@ internal class AdFilterImpl constructor(appContext: Context) : AdFilter {
         get() = viewModel.sharedPreferences.hasInstallation
 
     init {
-        viewModel.isEnabled.observeForever { enable ->
-            if (enable) {
-                viewModel.filters.value?.values?.forEach {
-                    if (it.isEnabled && it.hasDownloaded()) {
-                        viewModel.enableFilter(it)
+        Handler(Looper.getMainLooper()).post {
+            viewModel.isEnabled.observeForever { enable ->
+                if (enable) {
+                    viewModel.filters.value?.values?.forEach {
+                        if (it.isEnabled && it.hasDownloaded()) {
+                            viewModel.enableFilter(it)
+                        }
                     }
+                    filterDataLoader.load(FilterDataLoader.ID_CUSTOM)
+                } else {
+                    filterDataLoader.unloadAll()
+                    filterDataLoader.unloadCustomFilter()
                 }
-                filterDataLoader.load(FilterDataLoader.ID_CUSTOM)
-            } else {
-                filterDataLoader.unloadAll()
-                filterDataLoader.unloadCustomFilter()
+                viewModel.updateEnabledFilterCount()
+                viewModel.sharedPreferences.isEnabled = enable
+                // notify onDirty
+                (viewModel.onDirty as MutableLiveData).value = None.Value
             }
-            viewModel.updateEnabledFilterCount()
-            viewModel.sharedPreferences.isEnabled = enable
-            // notify onDirty
-            (viewModel.onDirty as MutableLiveData).value = None.Value
+            viewModel.workInfo.observeForever { list -> processWorkInfo(list) }
         }
-        viewModel.workInfo.observeForever { list -> processWorkInfo(list) }
     }
 
     private fun processWorkInfo(workInfoList: List<WorkInfo>) {
